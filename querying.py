@@ -61,14 +61,18 @@ def filtering(s):
     s = re.sub(u'[\u0000-\u001f\u007f-\uffff]', '', s)
     return s
 
+words = list()
+def stemming(s):
+    for word in s:
+        list_word = words.append(stemmer.stem(word))
+    return words
 
 with open('jokowi.txt', 'r') as f:
     for line in f:
         tweet = json.loads(line)
         casefolds = casefold(tweet['text'])
         clean = filtering(casefolds)
+        stemmed = stemming(clean)
         tokens = preprocess(clean)
         terms_stop = [term for term in tokens if term not in stop]
-        for s in terms_stop:
-            print(stemmer.stem(s))
-        print(terms_stop)
+        print(stemmed)
