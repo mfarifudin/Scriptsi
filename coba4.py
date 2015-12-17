@@ -22,7 +22,7 @@ if (not api):
     print("Can't Authenticate")
     sys.exit(-1)
 
-searchQuery = 'joko widodo'  # this is what we're searching for
+searchQuery = 'LAPOR1708'  # this is what we're searching for
 maxTweets = 2000000  # Some arbitrary large number
 tweetsPerQry = 100
 
@@ -39,7 +39,7 @@ def print_tweet(tweet):
     post = tweet.text
     id = tweet.id
 
-    c.execute("INSERT INTO jokowi2 (id, time, username, post) VALUES (%s,%s,%s,%s)",
+    c.execute("INSERT INTO lapor (id, time, username, post) VALUES (%s,%s,%s,%s)",
                  (id, time.time(), username, post))
     conn.commit()
 
