@@ -24,10 +24,10 @@ if (not api):
     print("Can't Authenticate")
     sys.exit(-1)
 
-searchQuery = '@jokowi'  # this is what we're searching for
+searchQuery = '#BPL'  # this is what we're searching for
 maxTweets = 2000000  # Some arbitrary large number
 tweetsPerQry = 100
-fName = 'jokowi2.txt'
+fName = 'bpl.txt'
 
 # If results from a specific ID onwards are reqd, set since_id to that ID.
 # else default to no lower limit, go as far back as API allows

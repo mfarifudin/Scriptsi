@@ -22,13 +22,13 @@ if (not api):
     print("Can't Authenticate")
     sys.exit(-1)
 
-searchQuery = 'LAPOR1708'  # this is what we're searching for
+searchQuery = '#BPL'  # this is what we're searching for
 maxTweets = 2000000  # Some arbitrary large number
 tweetsPerQry = 100
 
 # If results from a specific ID onwards are reqd, set since_id to that ID.
 # else default to no lower limit, go as far back as API allows
-sinceId = None
+sinceId = 683853965616885761
 
 # If results only below a specific ID are, set max_id to that ID.
 # else default to no upper limit, start from the most recent tweet matching the search query.
@@ -39,7 +39,7 @@ def print_tweet(tweet):
     post = tweet.text
     id = tweet.id
 
-    c.execute("INSERT INTO lapor (id, time, username, post) VALUES (%s,%s,%s,%s)",
+    c.execute("INSERT INTO bpl (id, time, username, post) VALUES (%s,%s,%s,%s)",
                  (id, time.time(), username, post))
     conn.commit()
 
