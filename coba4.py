@@ -28,7 +28,7 @@ tweetsPerQry = 100
 
 # If results from a specific ID onwards are reqd, set since_id to that ID.
 # else default to no lower limit, go as far back as API allows
-sinceId = 683853965616885761
+sinceId = 686954323486453762
 
 # If results only below a specific ID are, set max_id to that ID.
 # else default to no upper limit, start from the most recent tweet matching the search query.
@@ -39,7 +39,7 @@ def print_tweet(tweet):
     post = tweet.text
     id = tweet.id
 
-    c.execute("INSERT INTO bpl (id, time, username, post) VALUES (%s,%s,%s,%s)",
+    c.execute("INSERT IGNORE INTO bpl (id, time, username, post) VALUES (%s,%s,%s,%s)",
                  (id, time.time(), username, post))
     conn.commit()
 
