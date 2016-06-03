@@ -1,8 +1,8 @@
 import mysql.connector
 import string
 import re
-import nltk
 import time
+import nltk
 from nltk.corpus import stopwords
 from nltk import PorterStemmer
 from nltk import pos_tag
@@ -13,11 +13,10 @@ from sklearn.svm import SVC, LinearSVC, NuSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report
 
-
 conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database='tweets')
 c = conn.cursor()
 
-sql = "SELECT id, post, label FROM bpl_train LIMIT 600"
+sql = "SELECT id, post, label FROM bpl_train LIMIT 30"
 
 stop_words = list(stopwords.words('english'))
 
@@ -60,11 +59,11 @@ def preprocess(s, lowercase=False):
     return tokens
 
 def filtering(s):
-    s = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', '', s)
-    s = re.sub('&[a-z]{1,6}', '', s)
-    s = re.sub('[\`\~\!\$\%\^\&\*\(\)\-\+\=\[\]\{\}\\\|\;\:\'\"\,\<\.\>\/\?]', '', s)
-    s = re.sub('(\s|^)?[0-9]+(\s|$)?', '', s)
-    s = re.sub(u'[\u0000-\u001f\u007f-\uffff]', '', s)
+    s = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', ' ', s)
+    s = re.sub('&#?[a-z0-9]{1,6};', ' ', s)
+    s = re.sub('[\`\~\!\$\%\^\&\*\(\)\-\+\=\[\]\{\}\\\|\;\:\'\"\,\<\.\>\/\?]', ' ', s)
+    s = re.sub('(\s|^)?[0-9]+(\s|$)?', ' ', s)
+    s = re.sub(u'[\u0000-\u001f\u007f-\uffff]', ' ', s)
     return s
 
 all_words = []
@@ -84,7 +83,7 @@ for row in results_train:
     labels = row[2]
     process = preprocess(filtering(post.lower()))
     terms_only = [term for term in process if term not in stop and len(term)>2]
-    #terms_tagged = pos_tag([stemmer.stem(word) for word in terms_only])
+    terms_tagged = pos_tag([stemmer.stem(word) for word in terms_only])
     #print (terms_tagged)
     documents.append((terms_only, labels))
     train_data.append(post)
