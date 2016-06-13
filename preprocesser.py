@@ -65,7 +65,7 @@ class Preprocess:
 class Tokenizer:
 
     @classmethod
-    def tokenize(self, word):
+    def tokenize_and_stem(self, word):
         tokenized = word_tokenize(word, language='english')
         stemmed = [stemmer.stem(term) for term in tokenized if len(term)>2]
         return stemmed
