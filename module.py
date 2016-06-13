@@ -1,70 +1,29 @@
 import mysql.connector
 import string
-import re
 import time
 import nltk
 from nltk.corpus import stopwords
-from nltk import PorterStemmer
-from nltk import pos_tag
+from nltk.tokenize import word_tokenize
 from nltk.classify.scikitlearn import SklearnClassifier
 from sklearn.naive_bayes import MultinomialNB, BernoulliNB
 from sklearn.linear_model import LogisticRegression,SGDClassifier
 from sklearn.svm import SVC, LinearSVC, NuSVC
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report
+from preprocesser import *
 
 conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database='tweets')
 c = conn.cursor()
 
-sql = "SELECT id, post, label FROM bpl_train LIMIT 30"
+sql = "SELECT post, label FROM bpl_train LIMIT 500"
 
 stop_words = list(stopwords.words('english'))
 
 punctuation = list(string.punctuation)
 stop = stop_words + punctuation + ['rt', 'via']
 
-stemmer = PorterStemmer()
-
-emoticons_str = r"""
-    (?:
-        [:=;] # Eyes
-        [oO\-]? # Nose (optional)
-        [D\)\]\(\]/\\OpP] # Mouth
-    )"""
-
-regex_str = [
-    emoticons_str,
-    r'<[^>]+>',
-    r'(?:@[\w_]+)',
-    r"(?:\#+[\w_]+[\w\'_\-]*[\w_]+)",
-    r'http[s]?://(?:[a-z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-f][0-9a-f]))+',
-
-    r'(?:(?:\d+,?)+(?:\.?\d+)?)',
-    r"(?:[a-z][a-z'\-_]+[a-z])",
-    r'(?:[\w_]+)',
-    r'(?:\S)'
-]
-
-tokens_re = re.compile(r'('+'|'.join(regex_str)+')', re.VERBOSE | re.IGNORECASE)
-emoticon_re = re.compile(r'^'+emoticons_str+'$', re.VERBOSE | re.IGNORECASE)
-
-
-def tokenize(s):
-    return tokens_re.findall(s)
-
-def preprocess(s, lowercase=False):
-    tokens = tokenize(s)
-    if lowercase:
-        tokens = [token if emoticon_re.search(token) else token.lower() for token in tokens]
-    return tokens
-
-def filtering(s):
-    s = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', ' ', s)
-    s = re.sub('&#?[a-z0-9]{1,6};', ' ', s)
-    s = re.sub('[\`\~\!\$\%\^\&\*\(\)\-\+\=\[\]\{\}\\\|\;\:\'\"\,\<\.\>\/\?]', ' ', s)
-    s = re.sub('(\s|^)?[0-9]+(\s|$)?', ' ', s)
-    s = re.sub(u'[\u0000-\u001f\u007f-\uffff]', ' ', s)
-    return s
+tokenizer = Tokenizer.tokenize_and_stem
+preprocesser = Preprocess.preprocessing
 
 all_words = []
 documents = []
@@ -75,31 +34,28 @@ test_data = []
 test_label = []
 
 c.execute(sql)
-results= c.fetchmany(size=200)
+results= c.fetchmany(size=100)
 results_train = c.fetchall()
 for row in results_train:
-    fileids = row[0]
-    post = row[1]
-    labels = row[2]
-    process = preprocess(filtering(post.lower()))
-    terms_only = [term for term in process if term not in stop and len(term)>2]
-    terms_tagged = pos_tag([stemmer.stem(word) for word in terms_only])
-    #print (terms_tagged)
-    documents.append((terms_only, labels))
+    post = row[0]
+    labels = row[1]
+    # process = word_tokenize(Preprocess.preprocess(post))
+    # terms_only = [term for term in process if term not in stop and len(term)>2]
+    # terms_tagged = pos_tag([stemmer.stem(word) for word in terms_only])
+    # print(process)
+    # documents.append((terms_only, labels))
     train_data.append(post)
     train_label.append(labels)
-    for w in terms_only:
-        all_words.append(w)
+    # for w in terms_only:
+    #     all_words.append(w)
 
 for row in results:
-    fileids = row[0]
-    post = row[1]
-    labels = row[2]
-    process = preprocess(filtering(post.lower()))
-    terms_only = [term for term in process if term not in stop and len(term)>2]
+    post = row[0]
+    labels = row[1]
+    # process = Tokenizer.tokenize(Preprocess.preprocess(post))
+    # terms_only = [term for term in process if term not in stop and len(term)>2]
     #terms_tagged = pos_tag([stemmer.stem(word) for word in terms_only])
-    #print (terms_tagged)
-    tests.append((terms_only, labels))
+    # tests.append((terms_only, labels))
     test_data.append(post)
     test_label.append(labels)
 
@@ -154,26 +110,30 @@ NuSVC_classifier = SklearnClassifier(NuSVC())
 NuSVC_classifier.train(training_set)
 print("NuSVC_classifier accuracy percent:", (nltk.classify.accuracy(NuSVC_classifier, testing_set))*100)
 '''
-vectorizer = TfidfVectorizer(min_df=5,
-                             max_df = 0.8,
+
+vectorizer = TfidfVectorizer(min_df=3,
+                             max_df = 0.7,
                              sublinear_tf=True,
+                             preprocessor=preprocesser,
+                             tokenizer=tokenizer,
+                             analyzer='word',
+                             stop_words='english',
                              use_idf=True)
+
 train_vectors = vectorizer.fit_transform(train_data)
 test_vectors = vectorizer.transform(test_data)
 
-classifier_rbf = LinearSVC()
+classifier_linearSvc = LinearSVC()
 t0 = time.time()
-classifier_rbf.fit(train_vectors, train_label)
+classifier_linearSvc.fit(train_vectors, train_label)
 t1 = time.time()
-prediction_rbf = classifier_rbf.predict(test_vectors)
+prediction_linearSvc = classifier_linearSvc.predict(test_vectors)
 t2 = time.time()
-time_rbf_train = t1-t0
-time_rbf_predict = t2-t1
+time_linear_train = t1-t0
+time_linear_predict = t2-t1
 
-print("Results for SVC(kernel=rbf)")
-print("Training time: %fs; Prediction time: %fs" % (time_rbf_train, time_rbf_predict))
-print(classification_report(test_label, prediction_rbf))
-print(train_data)
-
+print("Results for LinearSVC")
+print("Training time: %fs; Prediction time: %fs" % (time_linear_train, time_linear_predict))
+print(classification_report(test_label, prediction_linearSvc))
 
 conn.close()
