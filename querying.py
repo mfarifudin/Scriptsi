@@ -4,9 +4,11 @@ import re
 import sys
 from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
+from nltk import pos_tag
 import mysql.connector
 from collections import Counter, defaultdict
 import operator
+from preprocesser import *
 
 sys.stdout = codecs.getwriter('utf8')(sys.stdout.buffer)
 
@@ -57,11 +59,11 @@ def casefold(s):
     return s
 
 def filtering(s):
-    s = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', '', s)
-    s = re.sub('&[a-z]{1,6};', '', s)
-    s = re.sub('[\`\~\!\$\%\^\&\*\(\)\-\+\=\[\]\{\}\\\|\;\:\'\"\,\<\.\>\/\?]', '', s)
-    s = re.sub('(\s|^)?[0-9]+(\s|$)?', '', s)
-    s = re.sub(u'[\u0000-\u001f\u007f-\uffff]', '', s)
+    s = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', ' ', s)
+    s = re.sub('&#?[a-z0-9]{1,6}', ' ', s)
+    s = re.sub('[\`\~\!\$\%\^\&\*\(\)\-\+\=\[\]\{\}\\\|\;\:\'\"\,\<\.\>\/\?]', ' ', s)
+    s = re.sub('(\s|^)?[0-9]+(\s|$)?', ' ', s)
+    s = re.sub(u'[\u0000-\u001f\u007f-\uffff]', ' ', s)
     return s
 
 '''def stemming(s):
@@ -70,7 +72,7 @@ def filtering(s):
     return words'''
 
 
-sql = "SELECT post FROM bpl LIMIT 40000"
+sql = "SELECT post FROM bpl_train LIMIT 40"
 
 com = defaultdict(lambda : defaultdict(int))
 try:
@@ -97,10 +99,16 @@ try:
             com_max.append(((t1, t2), com[t1][t2]))
     # Get the most frequent co-occurrences
     terms_max = sorted(com_max, key=operator.itemgetter(1), reverse=True)
-    print(terms_max[:5])
+    print(terms_max[:10])
     #(count_all.most_common(10))
 except:
    print ("Error: unable to fetch data")
 
+text = "Both @Dele_Alli &amp; @RomeluLukaku9 can't stop getting involved in #BPL goals. More: https://t.co/cylc5MNJk4 https://t.co/1HPgjWHKx4"
+# text = "Just half a year ago, it was said that Hazard's better than Ronaldo! He hasn't scored for #CFC ever since! #BPL https://t.co/76Fgcv4h8e"
+# text = "#BPL Team Of The Week time again, with a few player you would expect to see more often getting a gig! @Outside90"
+
+process = Preprocess.tokenize_and_stem(Preprocess.preprocessing(text))
+print(process)
 # disconnect from server
 conn.close()

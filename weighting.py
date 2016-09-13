@@ -1,7 +1,7 @@
 import mysql.connector
 import math
 from preprocesser import *
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from textblob import TextBlob as tb
 
 conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database='tweets')
@@ -14,7 +14,7 @@ tokenizer = Preprocess.tokenize_and_stem
 preprocesser = Preprocess.preprocessing
 
 text0 = "Both @Dele_Alli &amp; @RomeluLukaku9 can't stop getting involved in #BPL goals. More: https://t.co/cylc5MNJk4 https://t.co/1HPgjWHKx4"
-text1 = "Just half a year ago, it was said that Hazard's better than Ronaldo! He hasn't scored for #CFC ever since! #BPL https://t.co/76Fgcv4h8e"
+text1 = "Just half a year ago, it was said said said that Hazard's better than Ronaldo! He hasn't scored for #CFC ever since! #BPL https://t.co/76Fgcv4h8e"
 text2 = "#BPL Team Of The Week time again, with a few player you would expect to see more often getting a gig! @Outside90"
 text3 = "'stop', 'get', 'involv', 'goal'"
 text4 = "'just', 'half', 'year', 'ago', 'said', 'hazard', 'better', 'ronaldo', 'score'"
@@ -70,9 +70,16 @@ vectorizer = TfidfVectorizer(min_df=0,
                              tokenizer=tokenizer,
                              analyzer='word',
                              use_idf=True)
+tf = CountVectorizer(preprocessor=preprocesser,
+                     tokenizer=tokenizer,
+                     ngram_range=(1,1))
 
 sklearn_rep = vectorizer.fit_transform(x_data)
-# print(sklearn_rep[0].toarray().tolist())
+tf_rep = tf.fit_transform(x_data)
+print(tf.get_feature_names())
+print(tf_rep[1].toarray())
+# print(vectorizer.get_feature_names())
+# print(sklearn_rep[1].toarray().tolist())
 # print(idf_rep['goal'])
 # print(tfidf_rep)
 

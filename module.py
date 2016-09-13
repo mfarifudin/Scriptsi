@@ -8,29 +8,34 @@ from nltk.classify import ClassifierI
 from sklearn.naive_bayes import MultinomialNB, BernoulliNB
 from sklearn.linear_model import LogisticRegression,SGDClassifier
 from sklearn.svm import SVC, LinearSVC, NuSVC
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import classification_report
-from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.cross_validation import cross_val_score,KFold,cross_val_predict
+from scipy.stats import sem
 from preprocesser import Preprocess
 import pickle
-import json
-from tweepy import Stream
-from tweepy import OAuthHandler
-from tweepy.streaming import StreamListener
+import numpy
+import math
 from statistics import mode
 
 conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database='tweets')
 c = conn.cursor()
-
-sql = "SELECT post, label FROM bpl_train ORDER BY id ASC LIMIT 600"
-
-stop_words = list(stopwords.words('english'))
-
-punctuation = list(string.punctuation)
-stop = stop_words + punctuation + ['rt', 'via']
+sql = "SELECT post, label FROM `table 26` WHERE `skipstatus`=0 order by `id` desc"
 
 tokenizer = Preprocess.tokenize_and_stem
 preprocesser = Preprocess.preprocessing
+
+vectorizer_tfidf = TfidfVectorizer(min_df=5,
+                             max_df = 0.7,
+                             ngram_range=(1,1),
+                             preprocessor=preprocesser,
+                             tokenizer=tokenizer,
+                             sublinear_tf=True,
+                             use_idf=True)
+
+vectorizer_tf = CountVectorizer(ngram_range=(1,1),
+                                preprocessor=preprocesser,
+                                tokenizer=tokenizer)
 
 all_words = []
 documents = []
@@ -39,9 +44,10 @@ train_data = []
 train_label = []
 test_data = []
 test_label = []
+t0 = time.time()
 
 c.execute(sql)
-results= c.fetchmany(size=100)
+results= c.fetchmany(size=1)
 results_train = c.fetchall()
 for row in results_train:
     post = row[0]
@@ -65,7 +71,7 @@ for row in results:
     tests.append((process, labels))
     test_data.append(post)
     test_label.append(labels)
-
+'''
 all_words = nltk.FreqDist(all_words)
 word_features = list(all_words.keys())[:1000]
 # print(all_words.most_common(15))
@@ -82,7 +88,6 @@ feature_sets_test = [(find_features(tweets), category) for (tweets, category) in
 training_set = feature_sets
 testing_set = feature_sets_test
 
-'''
 classifier = nltk.NaiveBayesClassifier.train(training_set)
 print("Original Naive Bayes Algo accuracy percent:", (nltk.classify.accuracy(classifier, testing_set))*100)
 classifier.show_most_informative_features(15)
@@ -116,22 +121,19 @@ NuSVC_classifier.train(training_set)
 print("NuSVC_classifier accuracy percent:", (nltk.classify.accuracy(NuSVC_classifier, testing_set))*100)
 '''
 
-vectorizer = TfidfVectorizer(min_df=5,
-                             max_df = 0.7,
-                             sublinear_tf=True,
-                             preprocessor=preprocesser,
-                             tokenizer=tokenizer,
-                             analyzer='word',
-                             use_idf=True)
-
-train_vectors = vectorizer.fit_transform(train_data)
-test_vectors = vectorizer.transform(test_data)
-
-classifier_linearSvc = LinearSVC()
-t0 = time.time()
-tr = classifier_linearSvc.fit(train_vectors, train_label)
 t1 = time.time()
-prediction_linearSvc = classifier_linearSvc.predict(test_vectors)
+
+train_vectors_tf = vectorizer_tf.fit_transform(train_data)
+test_vectors_tf = vectorizer_tf.transform(test_data)
+train_vectors_tfidf = vectorizer_tfidf.fit_transform(train_data)
+test_vectors_tfidf = vectorizer_tfidf.transform(test_data)
+
+# classifier_linearSvc = SVC(kernel='rbf', gamma=2)
+classifier_linearSvc = SVC(kernel='linear')
+
+tr = classifier_linearSvc.fit(train_vectors_tfidf, train_label)
+
+prediction_linearSvc = classifier_linearSvc.predict(test_vectors_tfidf)
 t2 = time.time()
 time_linear_train = t1-t0
 time_linear_predict = t2-t1
@@ -140,46 +142,45 @@ time_linear_predict = t2-t1
 # pickle.dump(tr,save_clf)
 # save_clf.close()
 
-print("Results for LinearSVC")
-print("Training time: %fs; Prediction time: %fs" % (time_linear_train, time_linear_predict))
-print(classification_report(test_label, prediction_linearSvc))
+# print("Results for LinearSVC")
+# print("Training time: %fs; Prediction time: %fs" % (time_linear_train, time_linear_predict))
+# print(classification_report(test_label, prediction_linearSvc))
+# print(confusion_matrix(test_label, prediction_linearSvc, labels=["pos", "neu", "neg"]))
 
-classifier_f = open("linearSvc.pickle", "rb")
-classifier_pickle = pickle.load(classifier_f)
-classifier_f.close()
+# classifier_f = open("linearSvcTf.pickle", "rb")
+# classifier_pickle = pickle.load(classifier_f)
+# classifier_f.close()
 
 def classify(query):
     temp = []
     temp.append(query)
-    new_vector = vectorizer.transform(temp)
-    return classifier_pickle.predict(new_vector)[0]
+    new_vector = vectorizer_tfidf.transform(temp)
+    return classifier_linearSvc.predict(new_vector)[0]
 
+# sql2 = "SELECT post FROM  `april` LIMIT 100 "
+# c.execute(sql2)
+# result_for_prediction = c.fetchall()
+#
 # votes=[]
-# for row in prediction_linearSvc:
-#     votes.append(row)
-# choice_votes = votes.count("pos")
-# choice_votes2 = votes.count("neu")
-# choice_votes3 = votes.count("neg")
-# conf = choice_votes / len(votes)
-# conf2 = choice_votes2 / len(votes)
-# conf3 = choice_votes3 / len(votes)
-# total = 0.5*conf+0.35*conf2+0.15*conf3
-# print(total)
+# for rows in prediction_linearSvc:
+#     posts = rows[0]
+#     prediction = classify(posts)
+#     votes.append(prediction)
+#
+# choice_pos = votes.count("pos")
+# choice_neu = votes.count("neu")
+# choice_neg = votes.count("neg")
+# sent_score = math.log10((choice_pos+1)/(choice_neg+1))
+# print(choice_pos)
+# print(choice_neu)
+# print(choice_neg)
+# print(sent_score)
 
 # import csv
 # resultFile = open("output.csv",'w')
 # wr = csv.writer(resultFile, dialect='excel-tab')
 # for row in prediction_linearSvc:
 #     wr.writerow([row])
-#
-# pipeline = Pipeline([('tfidf', TfidfTransformer()),
-#                      ('svm', LinearSVC())])
-# pipecl = SklearnClassifier(pipeline)
-# pipecl.train(training_set)
-# print("LinearSVC_classifier pipeline", (nltk.classify.accuracy(pipecl, testing_set))*100)
-# ininyoba= "dejan is the worst player ever"
-# proses_teks=find_features(tokenizer(preprocesser(ininyoba)))
-# print(pipecl.classify(proses_teks))
 
 # save_clf = open("pipeline.pickle","wb")
 # pickle.dump(pipecl, save_clf)
@@ -202,4 +203,21 @@ def classify(query):
 # def sentiment(text):
 #     terms = find_features(text)
 #     return voted_classifier.classify(terms)
+
+train_label_array = numpy.array(train_label)
+
+def performance_eval(clf, X, y, K):
+    validator = KFold (len(y), K, shuffle=True, random_state=0)
+    score1 = cross_val_score(clf, X, y, cv=validator, scoring='precision_weighted')
+    score2 = cross_val_score(clf, X, y, cv=validator, scoring='recall_weighted')
+    score3 = cross_val_score(clf, X, y, cv=validator, scoring='f1_weighted')
+    print("Result for precision: ", score1)
+    print("Average precision: ", numpy.mean(score1))
+    print("Result for recall: ",score2)
+    print("Average recall: ",numpy.mean(score2))
+    print("Result for f1 score: ",score3)
+    print("Average f1 score: ",numpy.mean(score3))
+
+performance_eval(classifier_linearSvc, train_vectors_tf, train_label_array,10)
+
 conn.close()

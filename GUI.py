@@ -111,7 +111,7 @@ root.title("Tweet Manual Annotation")
 root.geometry('950x500')
 
 def Data_Loader():
-    df=pd.read_csv('all_players (8).csv', nrows=10000, encoding='cp1252')
+    df=pd.read_csv('all_players (8).csv', encoding='cp1252')
     return df
 
 def setIndicator():

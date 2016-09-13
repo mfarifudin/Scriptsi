@@ -3,8 +3,6 @@ import tweepy
 import sys
 import mysql.connector
 import time
-import json
-
 
 conn = mysql.connector.connect(user='root', password='', host='127.0.0.1', database='tweets')
 
