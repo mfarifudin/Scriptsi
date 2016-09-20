@@ -23,7 +23,7 @@ def save_tweet(tweet):
     username = tweet.user.screen_name
     post = tweet.text
     id = tweet.id
-    c.execute("INSERT IGNORE INTO tweet (id, time, username, post) VALUES "
+    c.execute("INSERT IGNORE INTO all_data (id, time, username, post) VALUES "
               "(%s,%s,%s,%s)", (id, time.time(), username, post))
     connection.commit()
 
